@@ -74,7 +74,7 @@ static void sighandler(int sig)
 		simple_print("\nAnd what: ");
 	else if (sig_flag != 0)
 		simple_print("\n");
-		}
+}
 
 /**
   * main - entry point
@@ -87,7 +87,7 @@ int main(void)
 	struct stat fstat_buf;
 
 	if (signal(SIGINT, sighandler) == SIG_ERR)
-	  perror("signal error\n");
+		perror("signal error\n");
 	if (fstat(STDIN_FILENO, &fstat_buf) == -1)
 		perror("fstat error\n"), exit(98);
 	pipe_flag = (fstat_buf.st_mode & S_IFMT) == S_IFCHR ? 0 : 1;
