@@ -1,103 +1,65 @@
 #include "shell.h"
-/**
- * _strchr - checks for a char in a string
- * @s: the string
- * @c: the char being searched for
- * Return: pointer to char on success, NULL on failure
- */
-char *_strchr(char *s, char c)
-{
-	int len, n;
 
-	len = _strlen(s);
-	for (n = 0; n < len; n++)
+/**
+ * check_delim - Checks If A Character Match Any Char *
+ * @c: Character To Check
+ * @str: String To Check
+ * Return: 1 Succes, 0 Failed
+ */
+unsigned int check_delim(char c, const char *str)
+{
+	unsigned int i;
+
+	for (i = 0; str[i] != '\0'; i++)
 	{
-		if (*(s + n) == c)
-			return (s + n);
+		if (c == str[i])
+			return (1);
 	}
-	s = '\0';
-	return (s);
+	return (0);
 }
+
 /**
- * _strspn - gets length of a substring
- *
- * @s: string to be searched
- * @accept: string to match
- * Return: number of matching bytes
+ * _strtok - Token A String Into Token (strtrok)
+ * @str: String
+ * @delim: Delimiter
+ * Return: Pointer To The Next Token Or NULL
  */
-unsigned int _strspn(char *s, char *accept)
+char *_strtok(char *str, const char *delim)
 {
-	int s_len, n, result;
+	static char *ts;
+	static char *nt;
+	unsigned int i;
 
-	s_len = _strlen(s);
-	n = 0;
-	result = 0;
-	while (n < s_len)
+	if (str != NULL)
+		nt = str;
+	ts = nt;
+	if (ts == NULL)
+		return (NULL);
+	for (i = 0; ts[i] != '\0'; i++)
 	{
-		if (_strchr(accept, *(s + n)))
-			result++, n++;
-		else
-			return (result);
+		if (check_delim(ts[i], delim) == 0)
+			break;
 	}
-	return (result);
-}
-/**
- * _strpbrk - searches through a string for any set of bytes.
- * @s: string to search through
- * @delims: bytes to search for in the string.
- * Return: pointer to first occurence in s of anything in accept
- */
-char *_strpbrk(char *s, char *delims)
-{
-	char *temp;
-
-	temp = delims;
-	for (; *s != '\0'; s++)
+	if (nt[i] == '\0' || nt[i] == '#')
 	{
-		while (*delims != '\0')
-		{
-			if (*s == *delims)
-				return (s);
-			delims++;
-		}
-		delims = temp;
-	}
-	if (*s == '\0')
-		return (0);
-
-	return (s);
-}
-/**
- * _strtok_r - replicates strtok_r, a tokenizer
- * @s: string to be tokenized
- * @delim: delimiter that determines where we split s
- * @save_ptr: saves index in tokenized s so that repeated fn calls fetch tokens
- * Return: pointer to next token
- */
-char *_strtok_r(char *s, char *delim, char **save_ptr)
-{
-	char *token;
-
-	if (s == NULL)
-	{
-		if (*save_ptr == NULL)
-			return (NULL);
-		s = *save_ptr;
-	}
-	s += _strspn(s, delim);
-	if (*s == '\0')
-	{
-		*save_ptr = NULL;
+		nt = NULL;
 		return (NULL);
 	}
-	token = s;
-	s = _strpbrk(token, delim);
-	if (s == NULL)
-		*save_ptr = NULL;
+	ts = nt + i;
+	nt = ts;
+	for (i = 0; nt[i] != '\0'; i++)
+	{
+		if (check_delim(nt[i], delim) == 1)
+			break;
+	}
+	if (nt[i] == '\0')
+		nt = NULL;
 	else
 	{
-		*s = '\0';
-		*save_ptr = s + 1;
+		nt[i] = '\0';
+		nt = nt + i + 1;
+		if (*nt == '\0')
+			nt = NULL;
 	}
-	return (token);
+	return (ts);
 }

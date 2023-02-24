@@ -1,122 +1,118 @@
 #include "shell.h"
 
 /**
- * _getline - gets line from STDIN and places it in the buffer
- * @file: int assigned to the read of STDIN
- * Return: pointer to buffer with formatted input from STDIN
+ * main - Simple Shell (Hsh)
+ * @argc: Argument Count
+ * @argv:Argument Value
+ * Return: Exit Value By Status
  */
-char *_getline(int file)
+
+int main(__attribute__((unused)) int argc, char **argv)
 {
-	unsigned int i, index;
-	char *buffer;
-	static unsigned int buffer_size = BUFSIZE;
+	char *input, **cmd;
+	int counter = 0, statue = 1, st = 0;
 
-	buffer = malloc(sizeof(char) * buffer_size);
-	if (buffer == NULL)
+	if (argv[1] != NULL)
+		read_file(argv[1], argv);
+	signal(SIGINT, signal_to_handel);
+	while (statue)
 	{
-		perror("malloc for buffer failed\n");
-		return (NULL);
-	}
-	index = 0;
-	_memset(buffer, '\0', buffer_size);
-	while ((i = read(file, buffer + index, buffer_size - index)) > 0)
-	{
-
-		if (i < (buffer_size - index))
-			return (buffer);
-		buffer_size *= 2;
-		_realloc(buffer, buffer_size, buffer_size / 2);
-		if (buffer == NULL)
+		counter++;
+		if (isatty(STDIN_FILENO))
+			prompt();
+		input = _getline();
+		if (input[0] == '\0')
 		{
-			perror("realloc failed\n");
-			return (NULL);
+			continue;
 		}
-		index += i;
+		history(input);
+		cmd = parse_cmd(input);
+		if (_strcmp(cmd[0], "exit") == 0)
+		{
+			exit_bul(cmd, input, argv, counter);
+		}
+		else if (check_builtin(cmd) == 0)
+		{
+			st = handle_builtin(cmd, st);
+			free_all(cmd, input);
+			continue;
+		}
+		else
+		{
+			st = check_cmd(cmd, input, counter, argv);
+
+		}
+		free_all(cmd, input);
 	}
-	if (i == 0)
-		_memcpy(buffer, "exit", 5);
-	return (buffer);
+	return (statue);
 }
-
 /**
-  * parser - parses a string into tokens
-  * @str: string to parse
-  * @delimit: delimiters chosen by user
-  * Return: Double pointer to array of tokens
-  */
-char **parser(char *str, char *delimit)
+ * check_builtin - check builtin
+ *
+ * @cmd:command to check
+ * Return: 0 Succes -1 Fail
+ */
+int check_builtin(char **cmd)
 {
-	char **tokenized, *saveptr, *token;
-	unsigned int i, wc;
-
-	wc = word_count(str);
-	tokenized = malloc((wc + 1) * sizeof(char *));
-	if (!tokenized)
+	bul_t fun[] = {
+		{"cd", NULL},
+		{"help", NULL},
+		{"echo", NULL},
+		{"history", NULL},
+		{NULL, NULL}
+	};
+	int i = 0;
+		if (*cmd == NULL)
 	{
-		perror("malloc failed\n");
-		return (NULL);
-	}
-	tokenized[0] = token = _strtok_r(str, delimit, &saveptr);
-	for (i = 1; token; i++)
-		tokenized[i] = token = _strtok_r(NULL, delimit, &saveptr);
-	return (tokenized);
-}
-
-/** Global variable: Flag, to handle interrupt signals **/
-unsigned char sig_flag = 0;
-/**
-  * sighandler - handles signals from keyboard interrupts
-  * @sig: the signal caught
-  */
-static void sighandler(int sig)
-{
-	if (sig == SIGINT && sig_flag == 0)
-		simple_print("\nAnd what: ");
-	else if (sig_flag != 0)
-		simple_print("\n");
-}
-
-/**
-  * main - entry point
-  * Return: 0 on successful termination. -1 on failure.
-  */
-int main(void)
-{
-	char pipe_flag, *buffer, *cmds, *saveptr, **tokens;
-	env_t *linkedlist_path;
-	struct stat fstat_buf;
-
-	if (signal(SIGINT, sighandler) == SIG_ERR)
-		perror("signal error\n");
-	if (fstat(STDIN_FILENO, &fstat_buf) == -1)
-		perror("fstat error\n"), exit(98);
-	pipe_flag = (fstat_buf.st_mode & S_IFMT) == S_IFCHR ? 0 : 1;
-	linkedlist_path = list_from_path();
-	if (linkedlist_path == NULL)
 		return (-1);
-	saveptr = NULL;
-	while (1)
-	{
-		/*sig_flag = 0;*/
-		if (pipe_flag == 0)
-			simple_print("#cisfun$ ");
-		buffer = _getline(STDIN_FILENO);
-		if (!buffer)
-			break;
-		cmds = _strtok_r(buffer, "\n;", &saveptr);
-		while (cmds)
-		{
-			tokens = parser(cmds, "\t ");
-			if (!tokens)
-				break;
-			if (is_builtin(tokens[0]))
-				is_builtin(tokens[0])(tokens, linkedlist_path, cmds);
-			else
-			  sig_flag = 1, executor(tokens, linkedlist_path);
-			free(tokens);
-			cmds = _strtok_r(NULL, "\n;", &saveptr);
-		}
-		free(buffer);
 	}
-	return (0);
+
+	while ((fun + i)->command)
+	{
+		if (_strcmp(cmd[0], (fun + i)->command) == 0)
+			return (0);
+		i++;
+	}
+	return (-1);
+}
+/**
+ * creat_envi - Creat Array of Enviroment Variable
+ * @envi: Array of Enviroment Variable
+ * Return: Void
+ */
+void creat_envi(char **envi)
+{
+	int i;
+
+	for (i = 0; environ[i]; i++)
+		envi[i] = _strdup(environ[i]);
+	envi[i] = NULL;
+}
+
+/**
+ * prompt - Display Shell Prompt
+ */
+void prompt(void)
+{
+	PRINTER("cisfun$ ");
+}
+/**
+ * print_error - Display Error Based on Command and How Many Time Shell Looped
+ * @input:User Input
+ * @counter:Simple Shell Count Loop
+ * @argv:Program Name
+ * Return: Void
+ */
+void print_error(char *input, int counter, char **argv)
+{
+	char *er;
+
+	PRINTER(argv[0]);
+	PRINTER(": ");
+	er = _itoa(counter);
+	PRINTER(er);
+	free(er);
+	PRINTER(": ");
+	PRINTER(input);
+	PRINTER(": not found\n");
 }
